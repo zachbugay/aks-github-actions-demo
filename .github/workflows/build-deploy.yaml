@@ -25,10 +25,6 @@ jobs:
       uses: azure/login@v1
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-    - name: List contents
-      run: |
-        ls -la
     
     - name: Build and push image to ACR
       run: |
@@ -36,8 +32,8 @@ jobs:
           --registry ${{ env.ACR_NAME }} \
           --image ${{ env.IMAGE_NAME }}:${{ github.sha }} \
           --image ${{ env.IMAGE_NAME }}:latest \
-          --file ./Bugay.TestWebApi/Dockerfile \
-          ./Bugay.TestWebApi
+          --file ./Bugay.TestMyWebApi/Dockerfile \
+          ./Bugay.TestMyWebApi
     
     - name: Set AKS context
       uses: azure/aks-set-context@v3
@@ -55,8 +51,10 @@ jobs:
         kubectl apply -f k8s/deployment.yaml
         
         # Wait for rollout to complete
-        kubectl rollout status deployment/bugay-testwebapi
+        kubectl rollout status deployment/Bugay.TestWebApi
         
         # Get service external IP
         echo "Waiting for external IP..."
-        kubectl get service bugay-testwebapi -w
+        timeout 300 bash -c 'until kubectl get service Bugay.TestWebApi -o jsonpath="{.status.loadBalancer.ingress[0].ip}" | grep -q .; do sleep 5; done' || true
+        EXTERNAL_IP=$(kubectl get service Bugay.TestWebApi -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
+        echo "Service deployed at: $EXTERNAL_IP"

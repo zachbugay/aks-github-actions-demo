@@ -323,7 +323,7 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    
+    environment: main
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -339,8 +339,8 @@ jobs:
           --registry ${{ env.ACR_NAME }} \
           --image ${{ env.IMAGE_NAME }}:${{ github.sha }} \
           --image ${{ env.IMAGE_NAME }}:latest \
-          --file MyWebApi/Dockerfile \
-          ./MyWebApi
+          --file ./Bugay.TestMyWebApi/Dockerfile \
+          ./Bugay.TestMyWebApi
     
     - name: Set AKS context
       uses: azure/aks-set-context@v3
@@ -358,11 +358,13 @@ jobs:
         kubectl apply -f k8s/deployment.yaml
         
         # Wait for rollout to complete
-        kubectl rollout status deployment/mywebapi
+        kubectl rollout status deployment/Bugay.TestWebApi
         
         # Get service external IP
         echo "Waiting for external IP..."
-        kubectl get service mywebapi-service -w
+        timeout 300 bash -c 'until kubectl get service Bugay.TestWebApi -o jsonpath="{.status.loadBalancer.ingress[0].ip}" | grep -q .; do sleep 5; done' || true
+        EXTERNAL_IP=$(kubectl get service Bugay.TestWebApi -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
+        echo "Service deployed at: $EXTERNAL_IP"
 ```
 
 ## Step 12: Configure GitHub Repository
