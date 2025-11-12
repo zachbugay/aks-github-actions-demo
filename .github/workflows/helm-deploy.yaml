@@ -1,0 +1,116 @@
+name: Deploy ClusterInfo Helm Chart to AKS
+
+on:
+  workflow_dispatch:
+
+env:
+  ACR_NAME: ${{ vars.ACR_NAME }}
+  AKS_CLUSTER_NAME: ${{ vars.AKS_CLUSTER_NAME }}
+  AKS_RESOURCE_GROUP: ${{ vars.RESOURCE_GROUP }}
+  HELM_RELEASE_NAME: clusterinfo
+  HELM_CHART_NAME: clusterinfo
+  HELM_REPO_NAME: scubakiz
+  HELM_REPO_URL: https://scubakiz.github.io/clusterinfo/
+
+jobs:
+  deploy-helm-chart:
+    runs-on: ubuntu-latest
+    environment: main
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+    - name: Set AKS context
+      uses: azure/aks-set-context@v3
+      with:
+        resource-group: ${{ env.AKS_RESOURCE_GROUP }}
+        cluster-name: ${{ env.AKS_CLUSTER_NAME }}
+    
+    - name: Setup Helm
+      uses: azure/setup-helm@v3
+      with:
+        version: 'latest'
+    
+    - name: Login to ACR with Helm
+      run: |
+        ACR_TOKEN=$(az acr login --name ${{ env.ACR_NAME }} --expose-token --output tsv --query accessToken)
+        helm registry login ${{ env.ACR_NAME }}.azurecr.io --username 00000000-0000-0000-0000-000000000000 --password $ACR_TOKEN
+    
+    - name: Add and Update Helm Repository
+      run: |
+        echo "Adding Helm repository..."
+        helm repo add ${{ env.HELM_REPO_NAME }} ${{ env.HELM_REPO_URL }}
+        echo "Updating Helm repositories..."
+        helm repo update
+        echo "Verifying repository and chart..."
+        helm search repo ${{ env.HELM_REPO_NAME }}/${{ env.HELM_CHART_NAME }}
+    
+    - name: Pull and Push Helm Chart to ACR
+      run: |
+        echo "Pulling Helm chart from source repository..."
+        helm pull ${{ env.HELM_REPO_NAME }}/${{ env.HELM_CHART_NAME }}
+        
+        CHART_FILE=$(ls clusterinfo-*.tgz | head -n 1)
+        
+        if [ -z "$CHART_FILE" ]; then
+          echo "Error: No chart file found"
+          exit 1
+        fi
+        
+        echo "Pushing Helm chart to ACR: $CHART_FILE"
+        helm push $CHART_FILE oci://${{ env.ACR_NAME }}.azurecr.io/helm
+        
+        echo "Helm chart successfully pushed to ACR"
+    
+    - name: Deploy Helm Chart from ACR to AKS
+      run: |
+        echo "Deploying clusterinfo Helm chart to AKS cluster..."
+        
+        # Extract version from the chart file
+        CHART_VERSION=$(ls clusterinfo-*.tgz | head -n 1 | sed 's/clusterinfo-\(.*\)\.tgz/\1/')
+        
+        # Install or upgrade the Helm release with LoadBalancer service configuration
+        helm upgrade --install ${{ env.HELM_RELEASE_NAME }} \
+          oci://${{ env.ACR_NAME }}.azurecr.io/helm/${{ env.HELM_CHART_NAME }} \
+          --version $CHART_VERSION \
+          --set service.type=LoadBalancer \
+          --set service.port=5252 \
+          --set service.targetPort=5252 \
+          --create-namespace \
+          --namespace default \
+          --wait \
+          --timeout 5m
+        
+        echo "Helm chart deployed successfully"
+    
+    - name: Verify Deployment
+      run: |
+        echo "Verifying deployment status..."
+        helm list -A
+        kubectl get all -l app.kubernetes.io/name=${{ env.HELM_CHART_NAME }}
+        
+        echo "Waiting for LoadBalancer external IP..."
+        timeout 300 bash -c 'until kubectl get service -l app.kubernetes.io/name=${{ env.HELM_CHART_NAME }} -o jsonpath="{.items[0].status.loadBalancer.ingress[0].ip}" | grep -q .; do echo "Waiting for external IP..."; sleep 10; done' || true
+        
+        EXTERNAL_IP=$(kubectl get service -l app.kubernetes.io/name=${{ env.HELM_CHART_NAME }} -o jsonpath="{.items[0].status.loadBalancer.ingress[0].ip}")
+        
+        if [ -n "$EXTERNAL_IP" ]; then
+          echo "Service is accessible at: http://$EXTERNAL_IP:5252"
+        else
+          echo "Warning: External IP not yet assigned. Check service status with: kubectl get svc"
+        fi
+    
+    - name: Output Deployment Information
+      run: |
+        echo "=== Deployment Summary ==="
+        echo "Helm Release: ${{ env.HELM_RELEASE_NAME }}"
+        echo "Namespace: default"
+        echo "Chart Version: $(helm list -n default -o json | jq -r '.[] | select(.name=="${{ env.HELM_RELEASE_NAME }}") | .chart')"
+        echo "Service Port: 5252"
+        echo "=========================="
