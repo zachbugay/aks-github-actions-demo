@@ -32,8 +32,8 @@ jobs:
           --registry ${{ env.ACR_NAME }} \
           --image ${{ env.IMAGE_NAME }}:${{ github.sha }} \
           --image ${{ env.IMAGE_NAME }}:latest \
-          --file ./Bugay.TestMyWebApi/Dockerfile \
-          ./Bugay.TestMyWebApi
+          --file ./Bugay.TestWebApi/Dockerfile \
+          ./Bugay.TestWebApi
     
     - name: Set AKS context
       uses: azure/aks-set-context@v3
