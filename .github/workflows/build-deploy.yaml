@@ -55,8 +55,8 @@ jobs:
         kubectl apply -f k8s/deployment.yaml
         
         # Wait for rollout to complete
-        kubectl rollout status deployment/Bugay.TestWebApi
+        kubectl rollout status deployment/bugay-testwebapi
         
         # Get service external IP
         echo "Waiting for external IP..."
-        kubectl get service Bugay.TestWebApi -w
+        kubectl get service bugay-testwebapi -w

@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: Bugay.TestWebApi
+  name: bugay-testwebapi
   labels:
-    app: Bugay.TestWebApi
+    app: bugay-testwebapi
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: Bugay.TestWebApi
+      app: bugay-testwebapi
   template:
     metadata:
       labels:
-        app: Bugay.TestWebApi
+        app: bugay-testwebapi
     spec:
       containers:
-      - name: Bugay.TestWebApi
-        image: ${ACR_LOGIN_SERVER}/Bugay.TestWebApi:${IMAGE_TAG}
+      - name: bugay-testwebapi
+        image: ${ACR_LOGIN_SERVER}/bugay-testwebapi:${IMAGE_TAG}
         ports:
         - containerPort: 5028
         resources:
