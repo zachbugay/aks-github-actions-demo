@@ -25,6 +25,10 @@ jobs:
       uses: azure/login@v1
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: List contents
+      run: |
+        ls -la
     
     - name: Build and push image to ACR
       run: |
@@ -32,7 +36,7 @@ jobs:
           --registry ${{ env.ACR_NAME }} \
           --image ${{ env.IMAGE_NAME }}:${{ github.sha }} \
           --image ${{ env.IMAGE_NAME }}:latest \
-          --file Bugay.TestMyWebApi/Dockerfile \
+          --file ./Bugay.TestMyWebApi/Dockerfile \
           ./Bugay.TestMyWebApi
     
     - name: Set AKS context
