@@ -55,6 +55,6 @@ jobs:
         
         # Get service external IP
         echo "Waiting for external IP..."
-        timeout 300 bash -c 'until kubectl get service bugay-testwebapi-o jsonpath="{.status.loadBalancer.ingress[0].ip}" | grep -q .; do sleep 5; done' || true
-        EXTERNAL_IP=$(kubectl get service bugay-testwebapi-o jsonpath="{.status.loadBalancer.ingress[0].ip}")
+        timeout 300 bash -c 'until kubectl get service bugay-testwebapi -o jsonpath="{.status.loadBalancer.ingress[0].ip}" | grep -q .; do sleep 5; done' || true
+        EXTERNAL_IP=$(kubectl get service bugay-testwebapi -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
         echo "Service deployed at: $EXTERNAL_IP"
