@@ -89,23 +89,6 @@ jobs:
         
         echo "Helm chart deployed successfully"
     
-    - name: Verify Deployment
-      run: |
-        echo "Verifying deployment status..."
-        helm list -A
-        kubectl get all -l app.kubernetes.io/name=${{ env.HELM_CHART_NAME }}
-        
-        echo "Waiting for LoadBalancer external IP..."
-        timeout 300 bash -c 'until kubectl get service -l app.kubernetes.io/name=${{ env.HELM_CHART_NAME }} -o jsonpath="{.items[0].status.loadBalancer.ingress[0].ip}" | grep -q .; do echo "Waiting for external IP..."; sleep 10; done' || true
-        
-        EXTERNAL_IP=$(kubectl get service -l app.kubernetes.io/name=${{ env.HELM_CHART_NAME }} -o jsonpath="{.items[0].status.loadBalancer.ingress[0].ip}")
-        
-        if [ -n "$EXTERNAL_IP" ]; then
-          echo "Service is accessible at: http://$EXTERNAL_IP:5252"
-        else
-          echo "Warning: External IP not yet assigned. Check service status with: kubectl get svc"
-        fi
-    
     - name: Output Deployment Information
       run: |
         echo "=== Deployment Summary ==="
