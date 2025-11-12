@@ -100,6 +100,7 @@ echo "✓ AKS cluster created successfully"
 ```
 
 This command does several important things:
+
 - Creates a 2-node cluster with Standard_D2lds_v6 VMs
 - Enables managed identity (recommended over service principal for cluster identity)
 - Automatically configures AKS to pull images from our ACR using `--attach-acr`
@@ -358,12 +359,12 @@ jobs:
         kubectl apply -f k8s/deployment.yaml
         
         # Wait for rollout to complete
-        kubectl rollout status deployment/Bugay.TestWebApi
+        kubectl rollout status deployment/bugay-testwebapi
         
         # Get service external IP
         echo "Waiting for external IP..."
-        timeout 300 bash -c 'until kubectl get service Bugay.TestWebApi -o jsonpath="{.status.loadBalancer.ingress[0].ip}" | grep -q .; do sleep 5; done' || true
-        EXTERNAL_IP=$(kubectl get service Bugay.TestWebApi -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
+        timeout 300 bash -c 'until kubectl get service bugay-testwebapi -o jsonpath="{.status.loadBalancer.ingress[0].ip}" | grep -q .; do sleep 5; done' || true
+        EXTERNAL_IP=$(kubectl get service bugay-testwebapi -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
         echo "Service deployed at: $EXTERNAL_IP"
 ```
 
@@ -398,66 +399,6 @@ gh repo create aks-csharp-demo --public --source=. --remote=origin --push
 ```PowerShell
 # Update the ACR_NAME and ACR_LOGIN_SERVER in .github/workflows/build-deploy.yml
 sed -i "s/<YOUR_ACR_NAME>/$ACR_NAME/g" .github/workflows/build-deploy.yml
-```
-
-## Step 13: Test the Pipeline
-
-Push your code to trigger the GitHub Actions workflow:
-
-```PowerShell
-git add .
-git commit -m "Configure GitHub Actions workflow"
-git push origin main
-```
-
-Monitor the workflow execution:
-- Go to your GitHub repository
-- Click on the **Actions** tab
-- Watch your workflow run in real-time
-
-## Step 14: Verify Deployment
-
-Once the workflow completes, verify your deployment:
-
-```PowerShell
-# Check pods
-kubectl get pods
-
-# Check service
-kubectl get service mywebapi-service
-
-# Get external IP (may take a few minutes)
-EXTERNAL_IP=$(kubectl get service mywebapi-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-echo "Application URL: http://$EXTERNAL_IP"
-
-# Test the application
-curl http://$EXTERNAL_IP
-curl http://$EXTERNAL_IP/health
-```
-
-## Step 15: Monitoring and Troubleshooting
-
-### View Application Logs
-
-```PowerShell
-# Get logs from all pods
-kubectl logs -l app=mywebapi --tail=100
-
-# Follow logs in real-time
-kubectl logs -l app=mywebapi -f
-```
-
-### Describe Pods for Issues
-
-```PowerShell
-kubectl describe pod -l app=mywebapi
-```
-
-### Check Deployment Status
-
-```PowerShell
-kubectl get deployment mywebapi
-kubectl rollout history deployment/mywebapi
 ```
 
 ## Best Practices Implemented
@@ -530,4 +471,3 @@ This setup provides a solid foundation for deploying containerized applications 
 ---
 
 **Tags**: #Azure #AKS #Kubernetes #ACR #GitHub Actions #DevOps #CI/CD #CSharp #DotNet #Containers
-
