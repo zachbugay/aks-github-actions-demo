@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: Bugay.TestWebApi
+spec:
+  type: LoadBalancer
+  selector:
+    app: mywebapi
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 5028

@@ -1,0 +1,6 @@
+@Bugay.TestWebApi_HostAddress = http://localhost:5028
+
+GET {{Bugay.TestWebApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: Bugay.TestWebApi
+  labels:
+    app: Bugay.TestWebApi
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: Bugay.TestWebApi
+  template:
+    metadata:
+      labels:
+        app: Bugay.TestWebApi
+    spec:
+      containers:
+      - name: Bugay.TestWebApi
+        image: ${ACR_LOGIN_SERVER}/Bugay.TestWebApi:${IMAGE_TAG}
+        ports:
+        - containerPort: 5028
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5028
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5028
+          initialDelaySeconds: 5
+          periodSeconds: 5

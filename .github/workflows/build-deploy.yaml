@@ -1,0 +1,58 @@
+name: Build and Deploy to AKS
+
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+env:
+  ACR_NAME: ${{ vars.ACR_NAME }}
+  ACR_LOGIN_SERVER: ${{ vars.ACR_LOGIN_SERVER }}
+  AKS_CLUSTER_NAME: ${{ vars.AKS_CLUSTER_NAME }}
+  AKS_RESOURCE_GROUP: ${{ vars.RESOURCE_GROUP }}
+  IMAGE_NAME: ${{ vars.IMAGE_NAME }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+    - name: Build and push image to ACR
+      run: |
+        az acr build \
+          --registry ${{ env.ACR_NAME }} \
+          --image ${{ env.IMAGE_NAME }}:${{ github.sha }} \
+          --image ${{ env.IMAGE_NAME }}:latest \
+          --file MyWebApi/Dockerfile \
+          ./MyWebApi
+    
+    - name: Set AKS context
+      uses: azure/aks-set-context@v3
+      with:
+        resource-group: ${{ env.AKS_RESOURCE_GROUP }}
+        cluster-name: ${{ env.AKS_CLUSTER_NAME }}
+    
+    - name: Deploy to AKS
+      run: |
+        # Replace placeholders in deployment file
+        sed -i "s|\${ACR_LOGIN_SERVER}|${{ env.ACR_LOGIN_SERVER }}|g" k8s/deployment.yaml
+        sed -i "s|\${IMAGE_TAG}|${{ github.sha }}|g" k8s/deployment.yaml
+        
+        # Apply Kubernetes manifests
+        kubectl apply -f k8s/deployment.yaml
+        
+        # Wait for rollout to complete
+        kubectl rollout status deployment/mywebapi
+        
+        # Get service external IP
+        echo "Waiting for external IP..."
+        kubectl get service mywebapi-service -w
